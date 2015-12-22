@@ -7,17 +7,24 @@
  */
 
 namespace models;
-use system\library\Model;
+use system\library\Database\Model;
+use system\library\Verify;
+
 
 class Account extends Model {
-    protected  static $db_fields=array('id','cus_id','app_id','account_no','bank_id','bank','created_at','updated_at');
+    protected  static $db_fields=array('id','merchant_id','app_id','route_id','route_name','station_id','station_name','status',
+        'view','balance','created_at','updated_at');
     protected static $table ="accounts";
     public $id;
-    public $cus_id;
+    public $merchant_id;
     public $app_id;
-    public $account_no;
-    public $bank_id;
-    public $bank;
+    public $route_id;
+    public $route_name;
+    public $station_id;
+    public $station_name;
+    public $status;
+    public $view;
+    public $balance;
     public $created_at;
     public $updated_at;
 
@@ -30,7 +37,6 @@ class Account extends Model {
                 $attributes[$field] =$this->$field;
             }
         }
-
         return $attributes;
     }
 } 

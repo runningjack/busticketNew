@@ -12,10 +12,13 @@ namespace models;
 use system\library\Database\Model;
 
 class Tickets extends Model {
-    protected  static $db_fields=array('id','code','serial_no','terminal_id','route_id','stack_id','ticket_type','amount','status','created_at','updated_at');
+    protected  static $db_fields=array('id','agent_id','account_id','app_id','code','serial_no','terminal_id','route_id','stack_id','ticket_type','amount','status','created_at','updated_at');
     protected static $table ="tickets";
 
     public $id;
+    public $agent_id;
+    public $account_id;
+    public $app_id;
     public $code;
     public $serial_no;
     public $terminal_id;

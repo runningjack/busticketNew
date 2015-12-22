@@ -8,21 +8,22 @@
 
 namespace models;
 use system\library\Database\Model;
+use system\library\Verify;
 
 class Merchant extends Model {
-    protected  static $db_fields=array('id','app_id','key_salt','firstname','lastname','phone','store_contact','account_no','bank_name','sort_code',
+    protected  static $db_fields=array('id','app_id','key_salt','c_fname','c_lname','phone','store_contact','account_no','bank_name','sort_code',
         'email','username','password','store','device_IMEI','address','city','state','verified','logged_in','image','created_at','updated_at');
     protected static $table ="merchants";
 
     public  $id;
-    public $store_contat;
+    public $store_contact;
     public $app_id;
     public $key_salt;
     public $account_no;
     public $bank_name;
     public $sort_code;
-    public  $firstname;
-    public  $lastname;
+    public  $c_fname;
+    public  $c_lname;
     public  $phone;
     public  $email;
     public  $username;
@@ -32,9 +33,9 @@ class Merchant extends Model {
     public  $address;
     public  $city;
     public  $state;
-    public $verified;
-    public $logged_in;
-    public $image;
+    public  $verified;
+    public  $logged_in;
+    public  $image;
     public  $created_at;
     public  $updated_at;
 
@@ -63,4 +64,16 @@ class Merchant extends Model {
             return !empty($object_array) ? array_shift($object_array) : false;
         }
     }
+
+    public function pinAction($id,$input){
+
+        $verify = new Verify("","","",$input); //em\library\Verify("","","",$input);
+        return $verify->post(array("number"=>$input['phone']),"merchants",$id);
+    }
+
+
+    public static function uniqueID(){
+        return DB::table("merchants")->max("id");
+    }
+
 } 

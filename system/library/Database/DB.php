@@ -46,7 +46,6 @@ class DB extends Database {
 
         $attributes = $params;
         $instance = new self;
-
         $sql = "INSERT INTO ".$table."  (";
         $sql .= join(", ", array_keys($attributes));
         $sql .=")VALUES(";
@@ -81,8 +80,6 @@ class DB extends Database {
         $instance = new static;
         $attributes = $params;
         $attribute_pairs = array();
-
-
         foreach($attributes as $key => $value) {
             $attribute_pairs[] = "{$key}=:{$key}";
         }

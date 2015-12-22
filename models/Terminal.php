@@ -9,6 +9,7 @@
 namespace models;
 
 
+use system\library\Database\DB;
 use system\library\Database\Model;
 
 class Terminal extends Model {
@@ -35,5 +36,9 @@ class Terminal extends Model {
             }
         }
         return $attributes;
+    }
+
+    public static function getTerminalByName($short_name){
+        return DB::find_by_sql("SELECT * FROM ".self::$table." WHERE short_name='".$short_name."'");
     }
 } 
