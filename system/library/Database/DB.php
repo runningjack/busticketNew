@@ -117,6 +117,19 @@ class DB extends Database {
         }
     }
 
+    public static function findShortName($fieldVal,$table){
+        $instance = new static;
+        $sql =  $instance->query("SELECT * FROM ".$table." where short_name = '".$fieldVal."'" );
+        if($sql->execute()){
+            //$result_set =$sql->fetch(PDO::FETCH_ASSOC) ;
+            $object_array = array();
+            while ($row = $sql->fetch(\PDO::FETCH_ASSOC)) {
+                $object_array[] = $row;
+            }
+            return !empty($object_array) ? array_shift($object_array) : false;
+        }
+    }
+
     public static function find_by_sql($sql="") {
         $instance = new static;
         //$object_array =[];
@@ -127,7 +140,7 @@ class DB extends Database {
                 $object_array[] = $row;
             }
             if(($object_array)){
-                return $object_array;
+                return !empty($object_array) ? array_shift($object_array) : false;
             }else{
                 return false;
             }

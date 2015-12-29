@@ -51,7 +51,10 @@ function controller__autoload($classname) {
 
     $filename .= preg_replace('/_/', DIRECTORY_SEPARATOR, $classname) . '.php';
     $file = preg_replace("/\\\\/",DIRECTORY_SEPARATOR,$filename );
+
     require BASE_DIR.DIRECTORY_SEPARATOR. $file;
+
+
 }
 
 spl_autoload_register("controller__autoload");

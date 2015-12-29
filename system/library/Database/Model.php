@@ -60,6 +60,19 @@ class Model extends Database {
         }
     }
 
+    public static function findUniqueByColumn($field,$value){
+        $instance = new static;
+        $sql =  $instance->query("SELECT * FROM ".static::$table." where ".$field." = ".$value );
+        if($sql->execute()){
+            //$result_set =$sql->fetch(PDO::FETCH_ASSOC) ;
+            $object_array = array();
+            while ($row = $sql->fetch(\PDO::FETCH_ASSOC)) {
+                $object_array[] = static::instantiate($row);
+            }
+            return !empty($object_array) ? array_shift($object_array) : false;
+        }
+    }
+
 
 
 
