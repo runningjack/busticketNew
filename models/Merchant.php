@@ -50,8 +50,6 @@ class Merchant extends Model {
         }
         return $attributes;
     }
-
-
     public static function findByAppId($id){
         $instance = new static;
         $sql =  $instance->query("SELECT * FROM ".static::$table." where app_id = '".$id."'" );
@@ -64,14 +62,11 @@ class Merchant extends Model {
             return !empty($object_array) ? array_shift($object_array) : false;
         }
     }
-
     public function pinAction($id,$input){
 
         $verify = new Verify("","","",$input); //em\library\Verify("","","",$input);
         return $verify->post(array("number"=>$input['phone']),"merchants",$id);
     }
-
-
     public static function uniqueID(){
         return DB::table("merchants")->max("id");
     }

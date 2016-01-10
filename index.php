@@ -22,6 +22,9 @@ $app->get('/', function ($request, $response, $args) {
  */
 $app->get('/buses/index',function($request,$response,$args){
     $rer  = \models\Bus::all();
+    if($rer == false){
+        $rer=array();
+    }
     $response->write(json_encode($rer));
     return $response;
 });
@@ -32,6 +35,9 @@ $app->get('/buses/index',function($request,$response,$args){
 
 $app->get('/tickets/index',function($request,$response,$args){
     $rer  = \models\Tickets::all();
+    if($rer == false){
+        $rer=array();
+    }
     $response->write(json_encode($rer));
     return $response;
 });
@@ -59,8 +65,28 @@ $app->get('/tickets/update[/{id}/{status}]', function($request,$response,$args){
  * Get Tickets by appid
  */
 $app->get('/tickets/data[/{appid}]',function($request,$response,$args){
-    $rer  = \models\Tickets::find_by_sql("SELECT * FROM tickets WHERE app_id ='".$args['appid']."'");
-    $response->write(json_encode($rer));
+    $myTickets  = \models\Tickets::find_by_sql("SELECT * FROM tickets WHERE app_id ='".$args['appid']."'");
+
+
+    if($myTickets){
+        $result['success']  =true;
+        $result['data']     =$myTickets;
+        $result['msg']      ="Data Updated";
+        $result['code']     ="200";
+
+    }else{
+
+        $result['data']     =null;
+        $result['msg']      ="failed";
+        $result['success']  =false;
+        $result['code']     ="501";
+    }
+
+    if(!$myTickets){
+        $myTickets=array();
+    }
+
+    $response->write(json_encode($myTickets));
     return $response;
 })->setArgument('id', '1');
 /**
@@ -423,6 +449,9 @@ $app->post("/route/create/",function($request,$response,$args){
  */
 $app->get('/terminals/index',function($request,$response,$args){
     $rer=\models\Terminal::all();
+    if($rer == false){
+        $rer=array();
+    }
     $response->write(json_encode($rer));
     return $response;
 });
