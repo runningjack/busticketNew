@@ -22,7 +22,7 @@ $app->get('/', function ($request, $response, $args) {
  */
 $app->get('/buses/index',function($request,$response,$args){
     $rer  = \models\Bus::all();
-    if($rer == false){
+    if(!$rer){
         $rer=array();
     }
     $response->write(json_encode($rer));
@@ -35,7 +35,7 @@ $app->get('/buses/index',function($request,$response,$args){
 
 $app->get('/tickets/index',function($request,$response,$args){
     $rer  = \models\Tickets::all();
-    if($rer == false){
+    if(!$rer){
         $rer=array();
     }
     $response->write(json_encode($rer));
@@ -49,6 +49,7 @@ $app->get('/tickets/index',function($request,$response,$args){
 $app->get('/tickets/update[/{id}/{status}]', function($request,$response,$args){
     $ticket  = \models\Tickets::find($args['id']);
     $ticket->status = $args['status'];
+    $ticket->created_at = date("Y-m-d H:i:s");
     $rer=[];
 
     if($ticket->update()){
@@ -59,6 +60,87 @@ $app->get('/tickets/update[/{id}/{status}]', function($request,$response,$args){
         $rer['msg']="failed";
     }
     $response->write(json_encode($rer));
+    return $response;
+});
+
+$app->post('/tickets/batchsync[/{appid}]',function($request,$response,$args){
+    $batchTickets = \models\Tickets::find_by_sql("SELECT * FROM tickets WHERE status=2 AND app_id ='".$args['appid']."'");
+    $json = $request->getBody();
+    $json =str_replace("\\","",$json);
+    $json =str_replace("\"[","[",$json);
+    $json =str_replace("]\"","]",$json);
+    $datas = json_decode($json,true);
+
+   //$myTicket = new \models\Ticket();
+    //$ticketing = json_decode($args['ticketing']);
+    $k=1;
+    $verifiedTicket = array();
+   foreach($datas as $data){
+        $myTicket = \models\Tickets::find($data[$k]->id);
+        if($myTicket->status == 2){
+            array_push($verifiedTicket,$myTicket) ;
+        }elseif($myTicket->status == 1){
+
+        }elseif($myTicket->status == 0){
+            $myTicket->status =1;
+            $myTicket->created_at = date("Y-m-d H:i:s");
+            $myTicket->update();
+        }
+
+        $k++;
+    }
+
+
+    $result=[];
+    if(count($verifiedTicket)>0){
+        $result['success']  =true;
+        $result['data']     =$verifiedTicket;
+        $result['msg']      ="Data Updated";
+        $result['code']     ="200";
+    }else{
+        //c
+        $result['success']  =true;
+        $result['data']     =null;
+        $result['msg']      ="Data Updated";
+        $result['code']     ="200";
+    }
+
+    $myFile = "javafile.txt";
+    $fh = fopen($myFile, 'w') or die("can't open file");
+
+    fwrite($fh, json_encode($result));
+
+    fclose($fh);
+
+
+    $response->write(json_encode($result));
+    return $response;
+});
+
+//Gets all tickets relating to a particular
+//route to a varifiers on a particular route
+$app->get("/tickets/verifier/[/{route_id}]",function($request,$response,$args){
+    $myTickets  = \models\Tickets::find_by_sql("SELECT * FROM tickets WHERE route_id =".$args['route_id']);
+
+
+    if($myTickets){
+        $result['success']  =true;
+        $result['data']     =$myTickets;
+        $result['msg']      ="Data Updated";
+        $result['code']     ="200";
+
+    }else{
+
+        $result['data']     =null;
+        $result['msg']      ="failed";
+        $result['success']  =false;
+        $result['code']     ="501";
+    }
+    if(!$myTickets){
+        $myTickets=array();
+    }
+
+    $response->write(json_encode($myTickets));
     return $response;
 });
 /**
@@ -81,7 +163,6 @@ $app->get('/tickets/data[/{appid}]',function($request,$response,$args){
         $result['success']  =false;
         $result['code']     ="501";
     }
-
     if(!$myTickets){
         $myTickets=array();
     }
@@ -89,6 +170,41 @@ $app->get('/tickets/data[/{appid}]',function($request,$response,$args){
     $response->write(json_encode($myTickets));
     return $response;
 })->setArgument('id', '1');
+
+$app->get('/ticketing/verify[/{id}/{inspectid}]',function($request,$response,$args){
+
+    $ticketing = \models\Ticketing::getTicketingByTicketID($args['id']);
+    //print_r($ticketing);
+    $ticket = \models\Tickets::find($args['id']);
+
+    if($ticketing){ // check if ticket exits
+        if($ticketing->status == 0){
+            /* return error ticket not issued */
+            $ticketing->status  = 1;
+            $ticketing->agent_id = $args['inspectid'];
+            if($ticketing && $ticket){
+                //update ticketing data details
+                if($ticketing->update()){
+                    $ticket->update();
+                    $msg = "Access Granted  Ticket is Valid";
+                }
+            }else{
+                $msg ="Unexpected Error";
+            }
+        }elseif($ticketing->status == 1){
+            // return
+            $msg = "Access Denied Ticket already used";
+        }else{
+            $msg = "Invalid Ticket";
+        }
+    }else{
+        /* return ticket is invalid */
+        $msg = "Invalid Ticket";
+    }
+    $response->write($msg);
+
+    return $response;
+});
 /**
  * Create Ticketing
  */
@@ -103,8 +219,20 @@ $app->post("/ticketing/create/",function($request,$response,$args){
         foreach($data as $key=>$val){
             $myTicketing->$key = $val;
         }
+        $myTicketing->created_at = date("Y-m-d H:i:s");
         if($myTicketing->create()){
+            $ticket = \models\Tickets::find($myTicketing->ticket_id);
+            $ticket->status=1;
+            $ticket->updated_at = date("Y-m-d H:i:s");
+            $ticket->update();
+
+            $acc = \models\Account::find_by_sql("SELECT * FROM accounts WHERE app_id ='".$data['app_id']."'");
+            $acc[0]->balance -= $data['amount'];
+            $acc[0]->updated_at = date("Y-m-d H:i:s");
+            $acc[0]->update();
             $result['success']  =true;
+
+
             $result['data']     =$myTicketing;
             $result['msg']      ="Data Updated";
             $result['code']     ="200";
@@ -180,7 +308,7 @@ $app->post("/merchants/create/",function($request,$response,$args){
                 if(isset($input['phone'])){
                     $merchant->pinAction($merchant->id,$data);
                 }
-               // $result                 =   array();
+                // $result                 =   array();
                 $result['success']      =   true;
                 $result['msg']          =   "Record Created";
                 $result['data']           =   $merchant->id;
@@ -224,13 +352,13 @@ $app->post("/account/create/",function($request,$response,$args){
 //$result = array();
         $account = new \models\Account();
         //$ticketing = json_decode($args['ticketing']);
-       if(!empty($data)){
+        if(!empty($data)){
             foreach($data as $key=>$val){
                 $account->$key = $val;
             }
         }
 
-       $account->created_at =date("Y-m-d H:i:s");
+        $account->created_at =date("Y-m-d H:i:s");
 
         $v =    new system\library\Validator\Validator( array(
             new system\library\Validator\Validate\Required("route_id"," is required "),
@@ -278,7 +406,7 @@ $app->post("/account/create/",function($request,$response,$args){
  */
 $app->get("/account/update[/{id}]", function($request,$response,$args){
     $appAcc = \models\Account::find_by_sql("SELECT * FROM accounts WHERE app_id='".$args['id']."'");
-    $appAcc->balance = 0;
+
     if($appAcc->update()){
         $result['msg']="Record Successfully Updated";
         $result['data']=$appAcc;
@@ -291,6 +419,42 @@ $app->get("/account/update[/{id}]", function($request,$response,$args){
     $response->write(json_encode($result));
     return $response;
 });
+
+
+//Logout Account
+$app->get("/account/login[/{id}]", function($request,$response,$args){
+    $appAcc = \models\Account::find_by_sql("SELECT * FROM accounts WHERE app_id='".$args['id']."'");
+    $appAcc->is_logged_in = 1;
+    if($appAcc->update()){
+        $msg="Logged In";
+    }else{
+        $msg="Unexpected error";
+    }
+    $response->write(($msg));
+    return $response;
+});
+
+//Logout Account
+$app->get("/account/logout[/{id}]", function($request,$response,$args){
+    $appAcc = \models\Account::find_by_sql("SELECT * FROM accounts WHERE app_id='".$args['id']."'");
+    $appAcc->is_logged_in = 0;
+    if($appAcc->update()){
+        $msg = "logged out";
+    }else{
+        $msg = "Unexpected Error";
+    }
+    $response->write(($msg));
+    return $response;
+});
+//get Account balance
+$app->get("/account/balancesync[/{appid}]",function($request,$response,$args){
+    $appAcc = \models\Account::find_by_sql("SELECT * FROM accounts WHERE app_id='".$args['appid']."'");
+
+    $msg = $appAcc[0]->balance;
+    $response->write($msg);
+    return $response;
+});
+
 /**
  * Create Verifiers
  */
@@ -308,9 +472,8 @@ $app->post("/verifiers/create/",function($request,$response,$args){
             }
         }
         $account->created_at =date("Y-m-d H:i:s");
-       $route = \models\Route::find_by_sql("SELECT * FROM routes WHERE short_name ='".$data['route_name']."'");
-
-       $account->route_id = $route[0]->id;
+        $route = \models\Route::find_by_sql("SELECT * FROM routes WHERE short_name ='".$data['route_name']."'");
+        $account->route_id = $route[0]->id;
 
         $v =    new system\library\Validator\Validator( array(
             new system\library\Validator\Validate\Required("route_id"," is required "),
@@ -460,6 +623,12 @@ $app->get('/terminals/index',function($request,$response,$args){
  */
 $app->get('/terminals/data[/{id}]',function($request,$response,$args){
     $rer  = \models\Terminal::find($args['id']);
+    $response->write(json_encode($rer));
+    return $response;
+})->setArgument('id', '1');
+
+$app->get('/driver/data[/{id}]',function($request,$response,$args){
+    $rer  = \models\Drive::find($args['id']);
     $response->write(json_encode($rer));
     return $response;
 })->setArgument('id', '1');

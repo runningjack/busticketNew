@@ -42,4 +42,17 @@ class Tickets extends Model {
 
         return $attributes;
     }
+
+    public static function getTicketByID($id){
+        $instance = new static;
+        $sql =  $instance->query("SELECT * FROM ".self::$table." WHERE id=".$id );
+        if($sql->execute()){
+            //$result_set =$sql->fetch(PDO::FETCH_ASSOC) ;
+            $object_array = array();
+            while ($row = $sql->fetch(\PDO::FETCH_ASSOC)) {
+                $object_array[] = static::instantiate($row);
+            }
+            return !empty($object_array) ? array_shift($object_array) : false;
+        }
+    }
 } 

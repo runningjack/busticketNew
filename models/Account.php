@@ -13,7 +13,7 @@ use system\library\Verify;
 
 class Account extends Model {
     protected  static $db_fields=array('id','merchant_id','app_id','route_id','route_name','station_id','station_name','status',
-        'view','balance','created_at','updated_at');
+        'view','password','is_logged_in','balance','created_at','updated_at');
     protected static $table ="accounts";
     public $id;
     public $merchant_id;
@@ -24,6 +24,8 @@ class Account extends Model {
     public $station_name;
     public $status;
     public $view;
+    public $password;
+    public $is_logged_in;
     public $balance;
     public $created_at;
     public $updated_at;

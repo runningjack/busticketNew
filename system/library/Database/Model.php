@@ -205,6 +205,40 @@ class Model extends Database {
         }
     }
 
+    public  function updateWithField($field){
+        $instance = new static;
+        $attributes = $this->attributes();
+        $attribute_pairs = array();
+
+
+        foreach($attributes as $key => $value) {
+            $attribute_pairs[] = "{$key}=:{$key}";
+        }
+        $sql = "UPDATE ".static::$table." SET ";
+        $sql .= join(", ", $attribute_pairs);
+        $sql .= " WHERE ".$field."=:id";
+
+        try{
+            $prep = $instance->prepare($sql);
+            foreach($attributes as $key=>$value){
+                $prep->bindValue(':'.$key, $value);
+            }
+
+            //var_dump($prep);
+
+            if ($prep->execute()){
+                return true ;
+            }else{
+                return   false;
+            }
+
+        }catch (\PDOException $e){
+            echo $e->getMessage();
+        }catch(\Exception $e){
+            echo $e->getMessage();
+        }
+    }
+
     public  function delete(){
         $instance = new self;
         $sql = "DELETE FROM ".static::$table." WHERE id=".$this->id;
