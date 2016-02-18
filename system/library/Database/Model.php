@@ -62,7 +62,8 @@ class Model extends Database {
 
     public static function findUniqueByColumn($field,$value){
         $instance = new static;
-        $sql =  $instance->query("SELECT * FROM ".static::$table." where ".$field." = ".$value );
+        $sql =  $instance->query("SELECT * FROM ".static::$table." where ".$field." = '".$value."'" );
+
         if($sql->execute()){
             //$result_set =$sql->fetch(PDO::FETCH_ASSOC) ;
             $object_array = array();
@@ -81,8 +82,14 @@ class Model extends Database {
         $object_array =array();
         $sql =  $instance->query($sql);
         if($sql->execute()){
-            while ($row = $sql->fetch(\PDO::FETCH_ASSOC)) {
-                $object_array[] = self::instantiate($row);
+            $k = 0;
+            while ($row = $sql->fetchAll(\PDO::FETCH_ASSOC)) {
+                foreach($row as $mrow){
+                    $object_array[] = self::instantiate($mrow);
+
+                }
+
+                $k++;
             }
             if(($object_array)){
                 return $object_array;

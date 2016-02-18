@@ -136,11 +136,11 @@ class DB extends Database {
         $object_array = array();
         $sql =  $instance->query($sql);
         if($sql->execute()){
-            while ($row = $sql->fetch(\PDO::FETCH_ASSOC)) {
+            while ($row = $sql->fetchAll(\PDO::FETCH_KEY_PAIR)) {
                 $object_array[] = $row;
             }
             if(($object_array)){
-                return !empty($object_array) ? array_shift($object_array) : false;
+                return ($object_array);
             }else{
                 return false;
             }

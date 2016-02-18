@@ -5,12 +5,29 @@
  * Date: 12/10/15
  * Time: 10:38 PM
  */
+ini_set('error_reporting', E_ALL);
+ini_set("display_errors","1");
+ini_set('max_execution_time', 0);
+ini_set('memory_limit', '-1');
 ?>
 <?php
 require 'vendor/autoload.php';
 require 'config.php';
 
-$app = new Slim\App();
+function connect_db() {
+    $server = 'localhost'; // this may be an ip address instead
+    $user = 'root';
+    $pass = '';
+    $database = 'busticket';
+    $connection = new mysqli($server, $user, $pass, $database);
+
+    return $connection;
+}
+
+$app = new Slim\App(array(
+    'debug' => true,'log.enabled' => true,
+));
+
 
 $app->get('/', function ($request, $response, $args) {
     $rer  = \models\Bus::all();
@@ -66,17 +83,21 @@ $app->get('/tickets/update[/{id}/{status}]', function($request,$response,$args){
 $app->post('/tickets/batchsync[/{appid}]',function($request,$response,$args){
     $batchTickets = \models\Tickets::find_by_sql("SELECT * FROM tickets WHERE status=2 AND app_id ='".$args['appid']."'");
     $json = $request->getBody();
+
     $json =str_replace("\\","",$json);
     $json =str_replace("\"[","[",$json);
     $json =str_replace("]\"","]",$json);
     $datas = json_decode($json,true);
+
 
    //$myTicket = new \models\Ticket();
     //$ticketing = json_decode($args['ticketing']);
     $k=1;
     $verifiedTicket = array();
    foreach($datas as $data){
-        $myTicket = \models\Tickets::find($data[$k]->id);
+
+        $myTicket = \models\Tickets::find($data['id']);
+
         if($myTicket->status == 2){
             array_push($verifiedTicket,$myTicket) ;
         }elseif($myTicket->status == 1){
@@ -100,17 +121,17 @@ $app->post('/tickets/batchsync[/{appid}]',function($request,$response,$args){
     }else{
         //c
         $result['success']  =true;
-        $result['data']     =null;
+        $result['data']     =$verifiedTicket;
         $result['msg']      ="Data Updated";
         $result['code']     ="200";
     }
 
-    $myFile = "javafile.txt";
+   /* $myFile = "javafile.txt";
     $fh = fopen($myFile, 'w') or die("can't open file");
 
     fwrite($fh, json_encode($result));
 
-    fclose($fh);
+    fclose($fh);*/
 
 
     $response->write(json_encode($result));
@@ -147,27 +168,34 @@ $app->get("/tickets/verifier/[/{route_id}]",function($request,$response,$args){
  * Get Tickets by appid
  */
 $app->get('/tickets/data[/{appid}]',function($request,$response,$args){
-    $myTickets  = \models\Tickets::find_by_sql("SELECT * FROM tickets WHERE app_id ='".$args['appid']."'");
+    $myTickets  = \models\Tickets::find_by_sql("SELECT * FROM tickets WHERE app_id ='".$args['appid']."'  AND status=0 LIMIT 1000");
+    $db = connect_db();
+    $result = $db->query("SELECT * FROM tickets WHERE app_id ='".$args['appid']."'  AND status=0 LIMIT 1000" );
+    while ( $row = $result->fetch_array(MYSQLI_ASSOC) ) {
+        $data[] = $row;
+    }
 
 
-    if($myTickets){
+    if(count($data)>0){
         $result['success']  =true;
         $result['data']     =$myTickets;
         $result['msg']      ="Data Updated";
         $result['code']     ="200";
+        /*foreach($myTickets as $ticket){
+            $ticket->download_status = 1;
+            //$ticket->update();
+        }*/
 
     }else{
 
-        $result['data']     =null;
+        $result['data']     =array();
         $result['msg']      ="failed";
         $result['success']  =false;
         $result['code']     ="501";
     }
-    if(!$myTickets){
-        $myTickets=array();
-    }
 
-    $response->write(json_encode($myTickets));
+
+    $response->write(json_encode($result));
     return $response;
 })->setArgument('id', '1');
 
@@ -568,7 +596,6 @@ $app->post("/route/create/",function($request,$response,$args){
         $v =    new system\library\Validator\Validator( array(
             new system\library\Validator\Validate\Unique("short_name","is already existing","merchants"),
             new system\library\Validator\Validate\Required('name'," is required"),
-
             new system\library\Validator\Validate\Required('short_name'," is required")
         ),$data);
         if($v->execute() == true){
@@ -627,15 +654,187 @@ $app->get('/terminals/data[/{id}]',function($request,$response,$args){
     return $response;
 })->setArgument('id', '1');
 
-$app->get('/driver/data[/{id}]',function($request,$response,$args){
-    $rer  = \models\Drive::find($args['id']);
-    $response->write(json_encode($rer));
+$app->get('/driver/data[/{licence_no}]',function($request,$response,$args){
+    //$rer  = \models\Driver::findUniqueByColumn("licence_no",$args['licence_no']);findUniqueByColumn("licence_code",$args['licence_no']);//
+    $rer = \models\Driver::find_by_sql("SELECT * FROM drivers WHERE licence_code ='".$args['licence_no']."'");
+    if($rer){
+        
+        $result['success']          =   true;
+        $result['msg']              =   "Record Created";
+        $result['data']             =   $rer;
+        $result['code']             =   "200";
+
+    }else{
+        //$result                   =   array();
+        $result['success']          =   false;
+        $result['msg']              =   "Driver record does not exist";
+        $result['data']             =   new \models\Driver();
+        $result['code']             =   "501";
+    }
+    $response->write(json_encode($result));
     return $response;
 })->setArgument('id', '1');
 
-$app->get('/hello[/{name}]', function ($request, $response, $args) {
-    $response->write("Hello, " . $args['name']);
+$app->post('/driver/update[/{licence_no}]',function($request,$response,$args){
+    //$rer  = \models\Driver::findUniqueByColumn("licence_no",$args['licence_no']);findUniqueByColumn("licence_code",$args['licence_no']);//
+    $data = $request->getBody();
+    $data = json_decode($data,true);
+    $rer = \models\Driver::find_by_sql("SELECT * FROM drivers WHERE licence_code ='".$args['licence_no']."'");
+
+
+    if($rer){
+        $rer[0]->password = $data['password'];
+        $rer[0]->bus_id = $data['bus_id'];
+        $rer[0]->route_id = $data['route_id'];
+        $rer[0]->verified = 1;
+        $rer[0]->app_id = $data['app_id'];
+        $rer[0]->is_logged_in =1;
+        $rer[0]->update();
+        $result['success']          =   true;
+        $result['msg']              =   "Record Created";
+        $result['data']             =   $rer;
+        $result['code']             =   "200";
+
+    }else{
+
+        $result['success']          =   false;
+        $result['msg']              =   "Driver record does not exist";
+        $result['data']             = new \models\Driver();
+        $result['code']             =   "501";
+    }
+    $response->write(json_encode($result));
     return $response;
-})->setArgument('name', 'World!');
+})->setArgument('id', '1');
+
+
+$app->post("/triplog/create[/{appid}]",function($request,$response,$args){
+    $data = $request->getBody();
+    $data = json_decode($data,true);
+
+
+    if(!empty($data)){
+        $trip = new \models\Triplog();
+        foreach($data as $key=>$val){
+            $trip->$key = $val;
+        }
+    }
+
+    $trip->created_at =date("Y-m-d H:i:s");
+
+    $v =    new system\library\Validator\Validator( array(
+        new system\library\Validator\Validate\Required("driver_id","driver id required"),
+        new system\library\Validator\Validate\Required('bus_id'," is required"),
+        new system\library\Validator\Validate\Required('route_id'," is required"),
+        new system\library\Validator\Validate\Required('service_id'," is required")
+    ),$data);
+
+    $result['success']          =   false;
+    $result['msg']              =   "";
+    $result['data']             =   $trip;
+    $result['code']             =   "404";
+
+    if($v->execute() == true){
+        if($trip->create()){
+
+            $result['success']          =   true;
+            $result['msg']              =   "Record Created";
+            $result['data']             =   $trip;
+            $result['code']             =   "200";
+
+        }else{
+
+            $result['success']          =   false;
+            $result['msg']              =   "Route could not be created";
+            $result['data']             =   $trip;
+            $result['code']             =   "501";
+            //throw new \Exception("Customer could not be created"); //return "error"; //unsuccessful
+
+        }
+    }else{
+        $v_result = $v->getErrors();
+        $result['success']      =   false;
+        $result['msg']          =   $v_result;
+        $result['data']         =   $trip;
+        $result['code']         =   "501";
+
+    }
+
+
+
+    $response->write(json_encode($result));
+    return $response;
+
+});
+
+
+$app->post('/triplog/batchsync',function($request,$response,$args){
+   // $batchTickets = \models\Tickets::find_by_sql("SELECT * FROM tickets WHERE status=2 AND app_id ='".$args['appid']."'");
+    try{
+        $json = $request->getBody();
+
+
+        $json =str_replace("\\","",$json);
+        $json =str_replace("\"[","[",$json);
+        $json =str_replace("]\"","]",$json);
+        $datas = json_decode($json,true);
+       // print_r($datas);
+        //exit;
+
+        //$myTicket = new \models\Ticket();
+        //$ticketing = json_decode($args['ticketing']);
+        $k=1;
+        $verifiedTicket = array();
+        foreach($datas as $data){
+            $myNewTrip = new \models\Triplog();
+            $myTrip = \models\Triplog::findUniqueByColumn("trip_id",$data['trip_id']);//("SELECT * FROM fleetlogs WHERE trip_id='$data[trip_id]'");
+
+            if(isset($myTrip->trip_id)){
+                foreach($data as $key=>$val){
+                    $myTrip->$key =$val;
+                }
+                $myTrip->update();
+                array_push($verifiedTicket,$myTrip);
+
+            }else{
+                $myNewTrip->create();
+                array_push($verifiedTicket,$myNewTrip);
+            }
+
+
+            $k++;
+        }
+
+
+        $result=[];
+        if(count($verifiedTicket)>0){
+            $result['success']  =true;
+            $result['data']     =$verifiedTicket;
+            $result['msg']      ="Data Synchronized to server";
+            $result['code']     ="200";
+        }else{
+            //c
+            $result['success']  =true;
+            $result['data']     =$verifiedTicket;
+            $result['msg']      ="Data Synchronized to server";
+            $result['code']     ="200";
+        }
+    }catch(Exception $ex){
+        $result['success']  =false;
+        $result['data']     =$verifiedTicket;
+        $result['msg']      =$ex->getMessage();
+        $result['code']     ="501";
+    }
+
+    /* $myFile = "javafile.txt";
+     $fh = fopen($myFile, 'w') or die("can't open file");
+
+     fwrite($fh, json_encode($result));
+
+     fclose($fh);*/
+
+
+    $response->write(json_encode($result));
+    return $response;
+});
 
 $app->run();

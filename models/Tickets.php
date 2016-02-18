@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Created by PhpStorm.
  * User: Amedora
@@ -12,7 +13,7 @@ namespace models;
 use system\library\Database\Model;
 
 class Tickets extends Model {
-    protected  static $db_fields=array('id','agent_id','account_id','app_id','code','serial_no','terminal_id','route_id','stack_id','ticket_type','amount','status','created_at','updated_at');
+    protected  static $db_fields=array('id','agent_id','account_id','app_id','code','serial_no','terminal_id','route_id','stack_id','ticket_type','amount','download_status','status','created_at','updated_at');
     protected static $table ="tickets";
 
     public $id;
@@ -26,6 +27,7 @@ class Tickets extends Model {
     public $stack_id;
     public $ticket_type;
     public $amount;
+    public $download_status;
     public $status;
     public $created_at;
     public $updated_at;

@@ -13,8 +13,8 @@ use system\library\Database\Model;
 
 class Driver extends Model
 {
-    protected  static $db_fields=array('id','app_id','hashed','key_salt','ip','firstname','lastname','licence_no','issue_date','expiry_date',
-        'addresss','city','state','country','phone','email','username','password','verified','disabled','created_at','updated_at');
+    protected  static $db_fields=array('id','app_id','hashed','key_salt','ip','firstname','lastname','licence_code','issue_date','expiry_date',
+        'addresss','city','state','country','phone','email','username','password','verified','disabled','is_logged_in','route_id','bus_id','created_at','updated_at');
     protected static $table ="drivers";
 
     public $id;
@@ -24,7 +24,7 @@ class Driver extends Model
     public $ip;
     public $firstname;
     public $lastname;
-    public $licence_no;
+    public $licence_code;
     public $issue_date;
     public $expiry_date;
     public $address;
@@ -37,6 +37,9 @@ class Driver extends Model
     public $password;
     public $verified;
     public $disabled;
+    public $is_logged_in;
+    public $route_id;
+    public $bus_id;
     public $created_at;
     public $updated_at;
 
